@@ -1,49 +1,49 @@
-import React, { useState, useEffect } from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React, { useState, useEffect } from "react";
+import "./tailwind.output.css";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import { CustomerProvider } from "./context/CustomerContext";
+import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+import CustomerWizard from "./pages/CustomerWizard";
 
-// PUBLIC_INTERFACE
-function App() {
-  const [theme, setTheme] = useState('light');
+/**
+ * Root App orchestrates simple linear flow:
+ * Login -> Customer Creation -> Dashboard
+ * Uses in-memory state only, with placeholders for future API calls.
+ */
 
-  // Effect to apply theme to document element
+function FlowController() {
+  const { isAuthenticated } = useAuth();
+  const [flow, setFlow] = useState("login"); // 'login' | 'create' | 'dashboard'
+
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
+    if (isAuthenticated && flow === "login") {
+      setFlow("create");
+    }
+  }, [isAuthenticated, flow]);
 
-  // PUBLIC_INTERFACE
-  const toggleTheme = () => {
-    setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
-  };
+  if (!isAuthenticated || flow === "login") {
+    return <Login onSuccess={() => setFlow("create")} />;
+  }
 
-  return (
-    <div className="App">
-      <header className="App-header">
-        <button 
-          className="theme-toggle" 
-          onClick={toggleTheme}
-          aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-        >
-          {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
-        </button>
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <p>
-          Current theme: <strong>{theme}</strong>
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+  if (flow === "create") {
+    return <CustomerWizard onDone={() => setFlow("dashboard")} />;
+  }
+
+  return <Dashboard onCreate={() => setFlow("create")} />;
 }
 
-export default App;
+// PUBLIC_INTERFACE
+export default function App() {
+  /** App entry: wraps providers and renders the flow controller. */
+  useEffect(() => {
+    document.title = "Customer Manager";
+  }, []);
+  return (
+    <AuthProvider>
+      <CustomerProvider>
+        <FlowController />
+      </CustomerProvider>
+    </AuthProvider>
+  );
+}
